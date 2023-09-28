@@ -1,0 +1,244 @@
+---
+title: "p8105_hw2_pt2632"
+author: "Pei Tian, pt2632"
+date: "9/26/2023"
+output: 
+  github_document: 
+  html_document:
+    toc: True
+    float_toc: True
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r echo=FALSE}
+library(tidyverse)
+```
+
+## Problem 1
+
+### Dataset Description
+#### Raw Datasets
+1. `pols-month.csv`: 822 rows, 9 columns
+  Variables:
+  - `mon`:
+  - `prez_gop`:
+  - `gov_gop`: 
+  - `sen_gop`: 
+  - `rep_gop`: 
+  - `prez_dem`: 
+  - `gov_dem`: 
+  - `sen_dem`: 
+  - `rep_dem`:
+2. `snp.csv`: 787 rows, 2 columns
+  Variables:
+  - `date`: 
+  - `close`
+3. `.csv`: 68 rows, 13 columns
+  Variables: 
+  - `year`: 
+  - Others:
+  
+### Data Processing
+```{r}
+# Tidy 'pols-month.csv'
+pols <- 
+  # load data
+  read_csv("./datasets/HW2/fivethirtyeight_datasets/pols-month.csv") |> 
+  # clean column name
+  janitor::clean_names() |> 
+  # separate date into 'year', 'month', 'day'
+  separate(mon, c("year", "month","day"), convert = TRUE, sep = '-') |> 
+  # change month number to month name
+  mutate(month = month(month, label = TRUE), 
+         # create 'president' variable
+         president = case_match(
+           prez_dem, 
+           0 ~ "gop", 
+           1 ~ "dem"
+         )) |>
+  # remove some columns
+  select(-c(day, prez_dem, prez_gop)) 
+pols
+```
+```{r}
+# Tidy 'snp.csv'
+snp <- 
+  # load data
+  read_csv("./datasets/HW2/fivethirtyeight_datasets/snp.csv") |> 
+  # clean column name
+  janitor::clean_names() |>  
+  # separate date into 'year', 'month', 'day'
+  separate(date, c("year", "month","day"), convert = TRUE, sep = '/') |>
+  # change month number to month name
+  mutate(month = month(month, label = TRUE)) |> 
+  # remove some columns
+  select(-day)
+snp
+```
+```{r}
+# Tidy 'unemployment.csv'
+unemploy <- 
+  # load data
+  read.csv("./datasets/HW2/fivethirtyeight_datasets/unemployment.csv") |> 
+  # clean column name
+  janitor::clean_names()  |>
+  # switch "wide" to "long" format
+  pivot_longer(-year, names_to = "month", values_to = "rate") |> 
+  # capitalize first letter to ensure same values in key variable
+  mutate(month = str_to_title(month))  
+unemploy
+```
+
+```{r}
+# Join datasets (Merge)
+res <- left_join(pols, snp, by = join_by(month == month, year == year))
+res <- left_join(res, unemploy, by = join_by(month == month, year == year))
+res
+```
+
+
+## Problem 2
+
+```{r}
+# Tidy "Mr.Trash Wheel" sheet in "Trash Wheel Collection Data.xlsx"
+trash1 <- 
+  # load data, specify sheet + omit row with figure
+  readxl::read_excel("./datasets/HW2/Trash Wheel Collection Data.xlsx", sheet = 1, skip = 1) |> 
+  # clean column name
+  janitor::clean_names() |>
+  # omit columns with notes
+  janitor::remove_empty(which = "cols") |>
+  # omit rows that do not include dumpster-specific data
+  filter(!is.na(dumpster)) |>
+  # calculate 'houses_powered' variable, houses_powered = 500 * weight_tons + 30
+  mutate(homes_powered = 500 * weight_tons + 30)
+trash1
+```
+```{r}
+# Tidy "Professor Trash Wheel" sheet in "Trash Wheel Collection Data.xlsx"
+trash2 <- 
+  # load data, specify sheet + omit row with figure
+  readxl::read_excel("./datasets/HW2/Trash Wheel Collection Data.xlsx", sheet = 2, skip = 1) |> 
+  # clean column name
+  janitor::clean_names() |>
+  # omit columns with notes
+  janitor::remove_empty(which = "cols") |>
+  # omit rows that do not include dumpster-specific data
+  filter(!is.na(dumpster)) |>
+  # calculate 'houses_powered' variable, houses_powered = 500 * weight_tons + 30
+  mutate(homes_powered = 500 * weight_tons + 30)
+trash2
+```
+
+```{r}
+# Tidy "Gwynnda Trash Wheel" sheet in "Trash Wheel Collection Data.xlsx"
+trash3 <- 
+  # load data, specify sheet + omit row with figure
+  readxl::read_excel("./datasets/HW2/Trash Wheel Collection Data.xlsx", sheet = 3, skip = 1) |> 
+  # clean column name
+  janitor::clean_names() |>
+  # omit columns with notes
+  janitor::remove_empty(which = "cols") |>
+  # omit rows that do not include dumpster-specific data
+  filter(!is.na(dumpster)) |>
+  # calculate 'houses_powered' variable, houses_powered = 500 * weight_tons + 30
+  mutate(homes_powered = 500 * weight_tons + 30)
+trash3
+```
+```{r}
+# Combine datasets into single dataset
+# add data source annotation
+trash1 <- mutate(trash1, source = "Mr. Trash Wheel")
+trash2 <- mutate(trash2, source = "Professor Trash Wheel")
+trash3 <- mutate(trash3, source = "Gwynnda Trash Wheel")
+total_trash <- bind_rows("Mr. Trash Wheel" = trash1, "Professor Trash Wheel" = trash2, "Gwynnda Trash Wheel" = trash3, id = "source")
+total_trash
+```
+
+
+## Problem 3
+
+### Demographic Dataset
+```{r}
+baseline <- 
+  # load data
+  read_csv("./datasets/HW2/data_mci/MCI_baseline.csv", skip = 1) |>  
+  # clean column name
+  janitor::clean_names() |>
+  # 'sex' and 'apoe4' variable as string
+  mutate(sex = case_match(sex, 
+                          0 ~ "Female",
+                          1 ~ "Male"), 
+         apoe4 = case_match(apoe4, 
+                            0 ~ "non-carrier",
+                            1 ~ "carrier"))
+```
+```{r}
+# Remove participants with no MCI
+mci_baseline <- filter(baseline, age_at_onset != ".")
+mci_baseline
+```
+
+```{r}
+# count of recruited participant
+dim(baseline)[1]
+```
+```{r}
+# count of participant developed MCI
+dim(mci_baseline)[1]
+```
+
+```{r}
+# average age
+mean(pull(baseline, current_age))
+```
+```{r}
+# Women APOE4 carriers proportion
+dim(filter(baseline, apoe4 == "carrier" & sex == "Female"))[1] / dim(filter(baseline, sex == "Female"))[1]
+```
+
+
+### Biomarker Dataset
+```{r}
+amyloid <- 
+  # load data
+  read_csv("./datasets/HW2/data_mci/mci_amyloid.csv", skip = 1) |>
+  # clean column name
+  janitor::clean_names()  
+```
+
+```{r}
+# Check whether some participants appear in only the baseline or amyloid datasets
+both_id <- intersect(pull(baseline, id), pull(amyloid, study_id))
+# baseline
+only_baseline <- c()
+for(id in pull(baseline, id)){
+  if (!id %in% both_id)
+    only_baseline <- append(only_baseline, id)
+}
+# amyloid
+only_amyloid <- c()
+for(id in pull(amyloid, study_id)){
+  if (!id %in% both_id)
+    only_amyloid <- append(only_amyloid, id)
+}
+print("Participant only in baseline:")
+only_baseline
+print("Participant only in amyloid:")
+only_amyloid
+```
+
+```{r}
+# Combine datasets
+participants <- inner_join(baseline, amyloid, by = join_by(id == study_id))
+participants
+```
+
+```{r}
+# Write combined data as csv file
+write_csv(participants, "./output/hw2_prob3_output.csv")
+```
+
