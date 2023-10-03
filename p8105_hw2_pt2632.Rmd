@@ -1,7 +1,7 @@
 ---
 title: "p8105_hw2_pt2632"
 author: "Pei Tian, pt2632"
-date: "9/26/2023"
+date: "10/3/2023"
 output: 
   github_document: 
   html_document:
@@ -13,13 +13,35 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r echo=FALSE}
+```{r echo = FALSE, message=FALSE}
 library(tidyverse)
 ```
 
 ## Problem 1
   
 ### Raw Datasets Processing
+1. `pols-month.csv`: 822 observations, 9 variables (Before processing)
+  
+    Variables:
+  
+    - `mon`: date of the count
+  
+    - `prez_gop`: indicator of whether the president was republican on the associated date (1 = yes, 0 = no)
+  
+    - `gov_gop`: the number of republican governors on the associated date
+  
+    - `sen_gop`: the number of republican senators on the associated date
+  
+    - `rep_gop`: the number of republican representatives on the associated date
+  
+    - `prez_dem`: indicator of whether the president was democratic on the associated date (1 = yes, 0 = no)
+  
+    - `gov_dem`: the number of democratic governors on the associated date
+  
+    - `sen_dem`: the number of democratic senators on the associated date
+  
+    - `rep_dem`: the number of democratic representatives on the associated date
+  
 ```{r}
 # Tidy 'pols-month.csv'
 pols <- 
@@ -31,7 +53,7 @@ pols <-
   separate(mon, c("year", "month","day"), convert = TRUE, sep = '-') |> 
   # change month number to month name
   mutate(month = month(month, label = TRUE), 
-         # create 'president' variable according to value of 'prez_dem' variable
+         # create 'president' variable according to value of 'prez_gop' variable
          president = recode(
            prez_gop, 
            "0" = "dem", 
@@ -40,8 +62,20 @@ pols <-
          )) |>
   # remove some columns
   select(-c(day, prez_dem, prez_gop)) 
-pols
 ```
+After processing, there are `r nrow(pols)` observations and `r ncol(pols)` variables in the dataset. 
+
+The range of the `year` is between `r range(pull(pols, year))[1]` and `r range(pull(pols, year))[2]`.
+
+
+2. `snp.csv`: 787 rows, 2 columns (Before processing)
+  
+    Variables:
+  
+    - `date`: the date of the observation
+  
+    - `close`: the closing values of the S&P stock index on the associated date
+  
 ```{r}
 # Tidy 'snp.csv'
 snp <- 
@@ -57,68 +91,48 @@ snp <-
   arrange(year, month) |> 
   # remove some columns
   select(-day)
-snp
 ```
+After processing, there are `r nrow(snp)` observations and `r ncol(snp)` variables in the dataset.
+
+The range of the `year` is between `r range(pull(snp, year))[1]` and `r range(pull(snp, year))[2]`.
+
+
+3. `unemployment.csv`: 816 rows, 13 columns (Before processing)
+  
+    Variables: 
+    - `year`: year information 
+  
+    - Others: unemployment rate of exact month
+  
 ```{r}
 # Tidy 'unemployment.csv'
 unemploy <- 
   # load data
-  read.csv("./datasets/HW2/fivethirtyeight_datasets/unemployment.csv") |> 
+  read.csv("./datasets/HW2/fivethirtyeight_datasets/unemployment.csv") |>
   # clean column name
   janitor::clean_names()  |>
   # switch "wide" to "long" format
   pivot_longer(-year, names_to = "month", values_to = "unemploy_rate") |> 
   # capitalize first letter to ensure same values in key variable
   mutate(month = str_to_title(month))  
-unemploy
 ```
+After processing, there are `r nrow(unemploy)` observations and `r ncol(unemploy)` variables in the dataset. 
+
+The range of the `year` is between `r range(pull(unemploy, year))[1]` and `r range(pull(unemploy, year))[2]`.
+
+
 ### Data Merge
-**Key variables: **`year` and `month`
+**Key variables:** use `year` and `month` variables to merge datasets.
 ```{r}
 # Join datasets (Merge)
 res <- left_join(pols, snp, by = join_by(month == month, year == year))
 res <- left_join(res, unemploy, by = join_by(month == month, year == year))
-res
 ```
 
-### Result Dataset (Merged Dataset)
-```{r}
-summary(res)
-```
-```{r}
-# dimension of result
-dim(res)
-```
-```{r}
-# range of year
-range(pull(res, year))
-```
-
-### Datasets Description
-1. `pols-month.csv`: 822 rows, 9 columns
-  Variables:
-  - `mon`: 
-  - `prez_gop`:
-  - `gov_gop`: 
-  - `sen_gop`: 
-  - `rep_gop`: 
-  - `prez_dem`: 
-  - `gov_dem`: 
-  - `sen_dem`: 
-  - `rep_dem`:
-2. `snp.csv`: 787 rows, 2 columns
-  Variables:
-  - `date`: 
-  - `close`: 
-3. `unemployment.csv`: 68 rows, 13 columns
-  Variables: 
-  - `year`: date type, year information 
-  - Others: unemployment rate of exact month
-4. Combined data:
-  - 
 
 ## Problem 2
 ### Raw Datasets Processing
+1. `Mr.Trash Wheel` sheet:
 ```{r}
 # Tidy "Mr.Trash Wheel" sheet in "Trash Wheel Collection Data.xlsx"
 trash1 <- 
@@ -134,9 +148,24 @@ trash1 <-
   mutate(homes_powered = 500 * weight_tons + 30,
          # convert type of year into 'character'
          year = as.character(year))
-trash1
 ```
+After processing, there are `r nrow(trash1)` observations and `r ncol(trash1)` variables in the dataset.
 
+Variables:
+
+  - `dumpster`: dumpster id
+
+  - `month`, `year`, `date`: date information
+
+  - `weight_tons`: collected trash weight
+
+  - `volume_cubic_yards`: trash volume
+
+  - `plastic_bottles`, `polystyrene`, `cigarette_butts`, `glass_bottles`, `grocery_bags`, `chip_bags`, `sports_balls`: specific trash amount
+
+  - `homes_powered`: power amount 
+  
+2. `Professor Trash Wheel` sheet:
 ```{r}
 # Tidy "Professor Trash Wheel" sheet in "Trash Wheel Collection Data.xlsx"
 trash2 <- 
@@ -152,9 +181,24 @@ trash2 <-
   mutate(homes_powered = 500 * weight_tons + 30,
          # convert type of year into 'character'
          year = as.character(year))
-trash2
 ```
+After processing, there are `r nrow(trash2)` observations and `r ncol(trash2)` variables in the dataset.
 
+Variables:
+
+  - `dumpster`: dumpster id
+
+  - `month`, `year`, `date`: date information
+
+  - `weight_tons`: collected trash weight
+
+  - `volume_cubic_yards`: trash volume
+
+  - `plastic_bottles`, `polystyrene`, `cigarette_butts`, `glass_bottles`, `grocery_bags`, `chip_bags`: specific trash amount
+
+  - `homes_powered`: power amount 
+
+3. `Gwynnda Trash Wheel` sheet: 
 ```{r}
 # Tidy "Gwynnda Trash Wheel" sheet in "Trash Wheel Collection Data.xlsx"
 trash3 <- 
@@ -170,30 +214,40 @@ trash3 <-
   mutate(homes_powered = 500 * weight_tons + 30,
          # convert type of year into 'character'
          year = as.character(year))
-trash3
 ```
+After processing, there are `r nrow(trash3)` observations and `r ncol(trash3)` variables in the dataset.
+
+Variables:
+
+  - `dumpster`: dumpster id
+
+  - `month`, `year`, `date`: date information
+
+  - `weight_tons`: collected trash weight
+
+  - `volume_cubic_yards`: trash volume
+
+  - `plastic_bottles`, `polystyrene`, `cigarette_butts`, `glass_bottles`, `plastic_bags`: specific trash amount
+
+  - `homes_powered`: power amount 
 
 ### Data Combination
 ```{r}
 # combine datasets into single dataset
-total_trash <- bind_rows(list("Mr. Trash Wheel" = trash1, "Professor Trash Wheel" = trash2, "Gwynnda Trash Wheel" = trash3), .id = "source")
-total_trash
-```
+total_trash <- bind_rows(
+  list("Mr. Trash Wheel" = trash1, 
+       "Professor Trash Wheel" = trash2, 
+       "Gwynnda Trash Wheel" = trash3), .id = "source")
 
-### Some Questions
-```{r}
-# total weight of trash collected by Professor Trash Wheel
-
-sum(pull(trash2, weight_tons))
 ```
-```{r}
-# total number of cigarette butts collected by Gwynnda in July of 2021
-trash3 |> 
-  filter(month == "July" & year == 2021) |>
-  pull(cigarette_butts) |>
-  sum()
-```
+After row binding process, there are `r nrow(total_trash)` observations and `r ncol(total_trash)` variables in the dataset. 
 
+Specific questions:  
+
+The total weight of trash collected by Professor Trash Wheel equals to `r sum(pull(trash2, weight_tons))`. 
+
+The total number of cigarette butts collected by Gwynnda in July of 2021
+equals to `r trash3 |> filter(month == "July" & year == 2021) |> pull(cigarette_butts) |> sum()`.
 
 
 ## Problem 3
@@ -201,40 +255,30 @@ trash3 |>
 ```{r}
 baseline <- 
   # load data
-  read_csv("./datasets/HW2/data_mci/MCI_baseline.csv", skip = 1) |>  
+  read_csv("./datasets/HW2/data_mci/MCI_baseline.csv", skip = 1) |> 
   # clean column name
   janitor::clean_names() |>
   # 'sex' and 'apoe4' variable as string
-  mutate(sex = case_match(sex, 
-                          0 ~ "Female",
-                          1 ~ "Male"), 
-         apoe4 = case_match(apoe4, 
-                            0 ~ "non-carrier",
-                            1 ~ "carrier"))
+  mutate(sex = recode(sex, "0" = "Female", "1" = "Male"), 
+         apoe4 = recode(apoe4, "0" = "non-carrier", "1" = "carrier"))
 ```
+There are `r nrow(baseline)` observations and `r ncol(baseline)` variables in this dataset.
+
+There are `r dim(baseline)[1]` participants are recruited.
+
+The average age of baseline is `r mean(pull(baseline, current_age))`.
+
+There are `r dim(filter(baseline, apoe4 == "carrier" & sex == "Female"))[1] / dim(filter(baseline, sex == "Female"))[1] * 100`% of women in the study are APOE4 carriers. 
+
+
 ```{r}
 # remove participants with no MCI
 mci_baseline <- filter(baseline, age_at_onset != ".")
 mci_baseline
 ```
+After processing, there are `r nrow(mci_baseline)` observations and `r ncol(mci_baseline)` variables. 
 
-```{r}
-# count of recruited participant
-dim(baseline)[1]
-```
-```{r}
-# count of participant developed MCI
-dim(mci_baseline)[1]
-```
-
-```{r}
-# average age
-mean(pull(baseline, current_age))
-```
-```{r}
-# Women APOE4 carriers proportion
-dim(filter(baseline, apoe4 == "carrier" & sex == "Female"))[1] / dim(filter(baseline, sex == "Female"))[1]
-```
+And there are `r dim(mci_baseline)[1]` participants developed MCI.
 
 
 ### Biomarker Dataset
@@ -245,6 +289,9 @@ amyloid <-
   # clean column name
   janitor::clean_names()  
 ```
+There are `r nrow(amyloid)` observations and `r ncol(amyloid)` variables in this dataset.
+
+
 ### Data Combination
 ```{r}
 # check whether some participants appear in only the baseline or amyloid datasets
@@ -266,16 +313,14 @@ only_baseline
 print("Participant only in amyloid:")
 only_amyloid
 ```
+There are `r length(only_baseline)` participants only in baseline dataset, and `r length(only_amyloid)` participants only in amyloid dataset.
 
 ```{r}
 # combine datasets
 participants <- inner_join(baseline, amyloid, by = join_by(id == study_id))
 participants
 ```
-```{r}
-# brief summary of merged dataset
-summary(participants)
-```
+After combining datasets with `id`, the result are of `r nrow(participants)` observations and `r ncol(participants)` variables.
 
 ```{r}
 # write combined data as csv file
