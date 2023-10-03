@@ -13,7 +13,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r include = FALSE}
+```{r}
 library(tidyverse)
 ```
 
@@ -85,7 +85,7 @@ snp <-
   # clean column name
   janitor::clean_names() |>  
   # separate date into 'year', 'month', 'day'
-  separate(date, c("year", "month","day"), convert = TRUE, sep = '/') |>
+  separate(date, c("year", "month","day"), convert = TRUE) |>
   mutate(
     # change month number to month name
     month = month(month, label = TRUE),
@@ -132,7 +132,9 @@ The range of the `year` is between `r range(pull(unemploy, year))[1]` and `r ran
 res <- left_join(pols, snp, by = join_by(month == month, year == year))
 res <- left_join(res, unemploy, by = join_by(month == month, year == year))
 ```
+After combination, there are `r nrow(res)` observations and `r ncol(res)` variables in the dataset. 
 
+The range of the `year` is between `r range(pull(res, year))[1]` and `r range(pull(res, year))[2]`.
 
 ## Problem 2
 ### Raw Datasets Processing
@@ -312,9 +314,7 @@ for(id in pull(amyloid, study_id)){
   if (!id %in% both_id)
     only_amyloid <- append(only_amyloid, id)
 }
-print("Participant only in baseline:")
 only_baseline
-print("Participant only in amyloid:")
 only_amyloid
 ```
 There are `r length(only_baseline)` participants only in baseline dataset, and `r length(only_amyloid)` participants only in amyloid dataset.
@@ -324,7 +324,7 @@ There are `r length(only_baseline)` participants only in baseline dataset, and `
 participants <- inner_join(baseline, amyloid, by = join_by(id == study_id))
 participants
 ```
-After combining datasets with `id`, the result are of `r nrow(participants)` observations and `r ncol(participants)` variables.
+After combining datasets with `id` variable, the result are of `r nrow(participants)` observations and `r ncol(participants)` variables.
 
 ```{r}
 # write combined data as csv file
