@@ -13,7 +13,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r echo = FALSE, message=FALSE}
+```{r include = FALSE}
 library(tidyverse)
 ```
 
@@ -80,13 +80,17 @@ The range of the `year` is between `r range(pull(pols, year))[1]` and `r range(p
 # Tidy 'snp.csv'
 snp <- 
   # load data
-  read_csv("./datasets/HW2/fivethirtyeight_datasets/snp.csv") |> 
+  read_csv("./datasets/HW2/fivethirtyeight_datasets/snp.csv", 
+           col_types = cols(date = col_date(format = "%m/%d/%y"))) |>
   # clean column name
   janitor::clean_names() |>  
   # separate date into 'year', 'month', 'day'
   separate(date, c("year", "month","day"), convert = TRUE, sep = '/') |>
-  # change month number to month name
-  mutate(month = month(month, label = TRUE)) |> 
+  mutate(
+    # change month number to month name
+    month = month(month, label = TRUE),
+    # change year format
+    year = if_else(year > 2023, year - 100, year)) |> 
   # arrange columns
   arrange(year, month) |> 
   # remove some columns
@@ -134,10 +138,10 @@ res <- left_join(res, unemploy, by = join_by(month == month, year == year))
 ### Raw Datasets Processing
 1. `Mr.Trash Wheel` sheet:
 ```{r}
-# Tidy "Mr.Trash Wheel" sheet in "Trash Wheel Collection Data.xlsx"
+# Tidy "Mr.Trash Wheel" sheet in "202309 Trash Wheel Collection Data.xlsx"
 trash1 <- 
   # load data, specify sheet + omit row with figure
-  readxl::read_excel("./datasets/HW2/Trash Wheel Collection Data.xlsx", sheet = 1, skip = 1) |> 
+  readxl::read_excel("./datasets/HW2/202309 Trash Wheel Collection Data.xlsx", sheet = 1, skip = 1) |> 
   # clean column name
   janitor::clean_names() |>
   # omit columns with notes
@@ -167,10 +171,10 @@ Variables:
   
 2. `Professor Trash Wheel` sheet:
 ```{r}
-# Tidy "Professor Trash Wheel" sheet in "Trash Wheel Collection Data.xlsx"
+# Tidy "Professor Trash Wheel" sheet in "202309 Trash Wheel Collection Data.xlsx"
 trash2 <- 
   # load data, specify sheet + omit row with figure
-  readxl::read_excel("./datasets/HW2/Trash Wheel Collection Data.xlsx", sheet = 2, skip = 1) |> 
+  readxl::read_excel("./datasets/HW2/202309 Trash Wheel Collection Data.xlsx", sheet = 2, skip = 1) |> 
   # clean column name
   janitor::clean_names() |>
   # omit columns with notes
@@ -200,10 +204,10 @@ Variables:
 
 3. `Gwynnda Trash Wheel` sheet: 
 ```{r}
-# Tidy "Gwynnda Trash Wheel" sheet in "Trash Wheel Collection Data.xlsx"
+# Tidy "Gwynnda Trash Wheel" sheet in "202309 Trash Wheel Collection Data.xlsx"
 trash3 <- 
   # load data, specify sheet + omit row with figure
-  readxl::read_excel("./datasets/HW2/Trash Wheel Collection Data.xlsx", sheet = 3, skip = 1) |> 
+  readxl::read_excel("./datasets/HW2/202309 Trash Wheel Collection Data.xlsx", sheet = 3, skip = 1) |> 
   # clean column name
   janitor::clean_names() |>
   # omit columns with notes
