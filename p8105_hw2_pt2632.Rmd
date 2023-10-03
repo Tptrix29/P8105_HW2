@@ -18,30 +18,8 @@ library(tidyverse)
 ```
 
 ## Problem 1
-
-### Dataset Description
-#### Raw Datasets
-1. `pols-month.csv`: 822 rows, 9 columns
-  Variables:
-  - `mon`:
-  - `prez_gop`:
-  - `gov_gop`: 
-  - `sen_gop`: 
-  - `rep_gop`: 
-  - `prez_dem`: 
-  - `gov_dem`: 
-  - `sen_dem`: 
-  - `rep_dem`:
-2. `snp.csv`: 787 rows, 2 columns
-  Variables:
-  - `date`: 
-  - `close`
-3. `.csv`: 68 rows, 13 columns
-  Variables: 
-  - `year`: 
-  - Others:
   
-### Data Processing
+### Raw Datasets Processing
 ```{r}
 # Tidy 'pols-month.csv'
 pols <- 
@@ -53,11 +31,12 @@ pols <-
   separate(mon, c("year", "month","day"), convert = TRUE, sep = '-') |> 
   # change month number to month name
   mutate(month = month(month, label = TRUE), 
-         # create 'president' variable
-         president = case_match(
-           prez_dem, 
-           0 ~ "gop", 
-           1 ~ "dem"
+         # create 'president' variable according to value of 'prez_dem' variable
+         president = recode(
+           prez_gop, 
+           "0" = "dem", 
+           "1" = "gop",
+           "2" = "gop"
          )) |>
   # remove some columns
   select(-c(day, prez_dem, prez_gop)) 
@@ -74,6 +53,8 @@ snp <-
   separate(date, c("year", "month","day"), convert = TRUE, sep = '/') |>
   # change month number to month name
   mutate(month = month(month, label = TRUE)) |> 
+  # arrange columns
+  arrange(year, month) |> 
   # remove some columns
   select(-day)
 snp
@@ -86,12 +67,13 @@ unemploy <-
   # clean column name
   janitor::clean_names()  |>
   # switch "wide" to "long" format
-  pivot_longer(-year, names_to = "month", values_to = "rate") |> 
+  pivot_longer(-year, names_to = "month", values_to = "unemploy_rate") |> 
   # capitalize first letter to ensure same values in key variable
   mutate(month = str_to_title(month))  
 unemploy
 ```
-
+### Data Merge
+**Key variables: **`year` and `month`
 ```{r}
 # Join datasets (Merge)
 res <- left_join(pols, snp, by = join_by(month == month, year == year))
@@ -99,9 +81,44 @@ res <- left_join(res, unemploy, by = join_by(month == month, year == year))
 res
 ```
 
+### Result Dataset (Merged Dataset)
+```{r}
+summary(res)
+```
+```{r}
+# dimension of result
+dim(res)
+```
+```{r}
+# range of year
+range(pull(res, year))
+```
+
+### Datasets Description
+1. `pols-month.csv`: 822 rows, 9 columns
+  Variables:
+  - `mon`: 
+  - `prez_gop`:
+  - `gov_gop`: 
+  - `sen_gop`: 
+  - `rep_gop`: 
+  - `prez_dem`: 
+  - `gov_dem`: 
+  - `sen_dem`: 
+  - `rep_dem`:
+2. `snp.csv`: 787 rows, 2 columns
+  Variables:
+  - `date`: 
+  - `close`: 
+3. `unemployment.csv`: 68 rows, 13 columns
+  Variables: 
+  - `year`: date type, year information 
+  - Others: unemployment rate of exact month
+4. Combined data:
+  - 
 
 ## Problem 2
-
+### Raw Datasets Processing
 ```{r}
 # Tidy "Mr.Trash Wheel" sheet in "Trash Wheel Collection Data.xlsx"
 trash1 <- 
@@ -114,9 +131,12 @@ trash1 <-
   # omit rows that do not include dumpster-specific data
   filter(!is.na(dumpster)) |>
   # calculate 'houses_powered' variable, houses_powered = 500 * weight_tons + 30
-  mutate(homes_powered = 500 * weight_tons + 30)
+  mutate(homes_powered = 500 * weight_tons + 30,
+         # convert type of year into 'character'
+         year = as.character(year))
 trash1
 ```
+
 ```{r}
 # Tidy "Professor Trash Wheel" sheet in "Trash Wheel Collection Data.xlsx"
 trash2 <- 
@@ -129,7 +149,9 @@ trash2 <-
   # omit rows that do not include dumpster-specific data
   filter(!is.na(dumpster)) |>
   # calculate 'houses_powered' variable, houses_powered = 500 * weight_tons + 30
-  mutate(homes_powered = 500 * weight_tons + 30)
+  mutate(homes_powered = 500 * weight_tons + 30,
+         # convert type of year into 'character'
+         year = as.character(year))
 trash2
 ```
 
@@ -145,22 +167,36 @@ trash3 <-
   # omit rows that do not include dumpster-specific data
   filter(!is.na(dumpster)) |>
   # calculate 'houses_powered' variable, houses_powered = 500 * weight_tons + 30
-  mutate(homes_powered = 500 * weight_tons + 30)
+  mutate(homes_powered = 500 * weight_tons + 30,
+         # convert type of year into 'character'
+         year = as.character(year))
 trash3
 ```
+
+### Data Combination
 ```{r}
-# Combine datasets into single dataset
-# add data source annotation
-trash1 <- mutate(trash1, source = "Mr. Trash Wheel")
-trash2 <- mutate(trash2, source = "Professor Trash Wheel")
-trash3 <- mutate(trash3, source = "Gwynnda Trash Wheel")
-total_trash <- bind_rows("Mr. Trash Wheel" = trash1, "Professor Trash Wheel" = trash2, "Gwynnda Trash Wheel" = trash3, id = "source")
+# combine datasets into single dataset
+total_trash <- bind_rows(list("Mr. Trash Wheel" = trash1, "Professor Trash Wheel" = trash2, "Gwynnda Trash Wheel" = trash3), .id = "source")
 total_trash
 ```
 
+### Some Questions
+```{r}
+# total weight of trash collected by Professor Trash Wheel
+
+sum(pull(trash2, weight_tons))
+```
+```{r}
+# total number of cigarette butts collected by Gwynnda in July of 2021
+trash3 |> 
+  filter(month == "July" & year == 2021) |>
+  pull(cigarette_butts) |>
+  sum()
+```
+
+
 
 ## Problem 3
-
 ### Demographic Dataset
 ```{r}
 baseline <- 
@@ -177,7 +213,7 @@ baseline <-
                             1 ~ "carrier"))
 ```
 ```{r}
-# Remove participants with no MCI
+# remove participants with no MCI
 mci_baseline <- filter(baseline, age_at_onset != ".")
 mci_baseline
 ```
@@ -209,9 +245,9 @@ amyloid <-
   # clean column name
   janitor::clean_names()  
 ```
-
+### Data Combination
 ```{r}
-# Check whether some participants appear in only the baseline or amyloid datasets
+# check whether some participants appear in only the baseline or amyloid datasets
 both_id <- intersect(pull(baseline, id), pull(amyloid, study_id))
 # baseline
 only_baseline <- c()
@@ -232,13 +268,17 @@ only_amyloid
 ```
 
 ```{r}
-# Combine datasets
+# combine datasets
 participants <- inner_join(baseline, amyloid, by = join_by(id == study_id))
 participants
 ```
+```{r}
+# brief summary of merged dataset
+summary(participants)
+```
 
 ```{r}
-# Write combined data as csv file
-write_csv(participants, "./output/hw2_prob3_output.csv")
+# write combined data as csv file
+write_csv(participants, "./output/hw2_problem3_output.csv")
 ```
 
